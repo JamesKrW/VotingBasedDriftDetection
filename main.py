@@ -19,8 +19,8 @@ def main():
     dd.add_method(HDDM_W(),1)
     dd.add_method(PageHinkley(),2)
     dd.add_method(KSWIN(),1)
-    change_list=dd.get_voted_drift(window_size=75,thresh_hold=100)
-    plot(data_stream,change_list,'./test.png')
+    change_list=dd.get_voted_drift(window_size=50,thresh_hold=100)
+    plot(data_stream,change_list,'./test2.png')
 
 if __name__=='__main__':
     main()
