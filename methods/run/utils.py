@@ -6,11 +6,13 @@ import torch
 import logging
 import time
 from typing import TypedDict
+import json
 
 class BertInput(TypedDict):
     ids: torch.Tensor
     mask: torch.Tensor
     token_type_ids: torch.Tensor
+    test: str
 
 class ModelInput(TypedDict):
     key: BertInput
@@ -63,3 +65,7 @@ def loadLogger(cfg):
 
 
     return logger
+
+def loadjson(path:str)->dict:
+    with open(path,'r') as f:
+        return json.load(f)

@@ -4,13 +4,13 @@ from collections import OrderedDict
 
 import torch
 import torch.nn
-
+import sys
 from refsum.run.utils import *
 from refsum.modules.loss import NTXent
-
-
+from transformers import get_scheduler
+from torch.optim import AdamW
 class Model:
-    def __init__(self, cfg, net_arch,optimizer):
+    def __init__(self, cfg, net_arch):
         self.cfg = cfg
         self.device = self.cfg.device
         self.net = net_arch.to(self.device)
@@ -23,28 +23,27 @@ class Model:
         self._logger.info(f"training start")
 
         # init optimizer
-        if optimizer==None:
-            optimizer_mode = self.cfg.train_optimizer_mode
-            if optimizer_mode == "adam":
-                self.optimizer = torch.optim.Adam(
-                    self.net.parameters(), **(self.cfg.optimizer_cfg)
-                )
-            else:
-                raise Exception("%s optimizer not supported" % optimizer_mode)
-        else:
-            self.optimizer=optimizer
-
+        self.optimizer=AdamW(self.net.parameters(), **self.cfg.optimizer_cfg)
+        # param_total=0
+        # print(len(self.optimizer.param_groups))
+        # for param_group in self.optimizer.param_groups:
+        #     # print(param_group['params'])
+        #     for param in param_group['params']:
+        #         param_total+=param.abs().mean()
+            
+        print(self.optimizer)
+        # print(param_total)
+        self.lr_scheduler = get_scheduler(
+    name="linear", optimizer=self.optimizer, num_warmup_steps=self.cfg.scheduler.num_warmup_steps, num_training_steps=self.cfg.scheduler.num_training_steps
+    )
+        # print(self.lr_scheduler)
         # init loss
 
         self.loss_v = 0
+        self.lossfunc=NTXent(cfg)
 
-        #init metric
-        self.metric_f=None
-
-        self.metric_v=0
-        
     def loss_f(self,input:ModelOutput,target):
-        return NTXent()(input["key"],input["query"])
+        return self.lossfunc(input["query"],input["key"])
     
     def optimize_parameters(self, model_input:ModelInput, model_target):
         self.net.train()
@@ -52,18 +51,52 @@ class Model:
         output = self.run_network(model_input)
         loss_v = self.loss_f(output, model_target.to(self.device))
         loss_v.backward()
+        # for name, param in self.net.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.shape)
+
+        # param_total=0
+        # grad_total=0
+        # for name,params in self.net.named_parameters():
+        #     # print(name,'grad_requires:',params.requires_grad,'grad_value:', params.grad.mean(),'param_value:',params.mean())
+        #     # print(name,'grad_value:', params.grad.abs().mean())
+        #     if params is not None:
+        #         param_total+=params.abs().mean()
+        #         if params.grad is not None:
+        #             grad_total+=params.grad.abs().mean()
+        # print('param before update:', param_total, "grad before update:", grad_total)
         self.optimizer.step()
+        # params_before = {name: param.detach().clone() for name, param in self.net.named_parameters()}
+        # self.optimizer.step()
+        # params_after = {name: param.detach() for name, param in self.net.named_parameters()}
+        # diffs = {name: (param_after - param_before).abs().mean() for name, param_before, param_after in zip(params_before.keys(), params_before.values(), params_after.values())}
+        # for name, diff in diffs.items():
+        #     print(name, diff)
+        # sys.exit()
+
+        # param_total=0
+        # for name,params in self.net.named_parameters():
+        #     # print(name,'grad_requires:',params.requires_grad,'grad_value:', params.grad.mean(),'param_value:',params.mean())
+        #     # print(name,'grad_value:', params.grad.abs().mean())
+        #     param_total+=params.abs().mean().detach()
+        # print('param after update:', param_total)
+        self.lr_scheduler.step()
         self.step+=1
-     
         self.loss_v = loss_v.item()
 
     def inference(self, model_input:ModelInput):
+        # with torch.no_grad():
         self.net.eval()
         output = self.run_network(model_input)
         return output
 
     def run_network(self, model_input:ModelInput):
-        model_input = model_input.to(self.device)
+        # wraping forward function 
+        for key, value in model_input.items():
+            for subkey, subvalue in value.items():
+                if torch.is_tensor(subvalue):
+                    model_input[key][subkey]=model_input[key][subkey].to(self.device)
+        # model_input = model_input.to(self.device)
         output = self.net(model_input)
         return output
 
@@ -72,11 +105,12 @@ class Model:
         state_dict = net.state_dict()
         for key, param in state_dict.items():
             state_dict[key] = param.to("cpu")
+        # print(state_dict)
         if save_file:
-            save_filename = "%s_%d.pt" % (self.cfg.name, self.step)
-            save_path = osp.join(self.cfg.chkpt_dir, save_filename)
-            save_path = osp.join(self.cfg.work_dir,save_path)
+            save_filename = f"{self.cfg.savename}_{self.step}.pth"
+            save_path = osp.join(self.cfg.work_dir, self.cfg.chkpt_dir)
             mkdir(save_path)
+            save_path = osp.join(save_path,save_filename)
             torch.save(state_dict, save_path)
             self._logger.info("Saved network checkpoint to: %s" % save_path)
         return state_dict
@@ -84,7 +118,7 @@ class Model:
     def load_network(self, loaded_net=None):
         if loaded_net is None:
             loaded_net = torch.load(
-                self.cfg.network_chkpt_path,
+                self.cfg.load.network_pth_path,
                 map_location=torch.device(self.device),
             )
         loaded_clean_net = OrderedDict()  # remove unnecessary 'module.'
@@ -97,15 +131,15 @@ class Model:
         self.net.load_state_dict(loaded_clean_net, strict=self.cfg.load.strict_load)
         
         self._logger.info(
-            "Checkpoint %s is loaded" % self.cfg.load.network_chkpt_path)
+            "Checkpoint %s is loaded" % self.cfg.load.network_pth_path)
             
 
     def save_training_state(self):
         
-        save_filename = "%s_%d.state" % (self.cfg.name, self.step)
-        save_path = osp.join(self.cfg.chkpt_dir, save_filename)
-        save_path = osp.join(self.cfg.work_dir,save_path)
+        save_filename = f"{self.cfg.savename}_{self.step}.state"
+        save_path = osp.join(self.cfg.work_dir,self.cfg.chkpt_dir)
         mkdir(save_path)
+        save_path = osp.join(save_path, save_filename)
         net_state_dict = self.save_network(False)
         state = {
             "model": net_state_dict,

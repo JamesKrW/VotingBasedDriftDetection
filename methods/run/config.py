@@ -9,9 +9,9 @@ class Config:
         parser = argparse.ArgumentParser(description='training template')
         parser.add_argument('--batch_size', type=int, default=128, metavar='N',
                             help='input batch size for training (default: 128)')
-        parser.add_argument('--num_epoch', type=int, default=10, metavar='N',
+        parser.add_argument('--num_epoch', type=int, default=300, metavar='N',
                             help='number of epochs to train (default: 10)')
-        parser.add_argument('--lr', type=float, default=1e-3, metavar='N',
+        parser.add_argument('--lr', type=float, default=1e-5, metavar='N',
                             help='learning rate')
         parser.add_argument('--seed', type=int, default=2022, metavar='N',
                             help='random seed')
@@ -24,24 +24,38 @@ class Config:
         self.seed=args.seed
 
         self.device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.work_dir="./work"
-        self.train_optimizer_mode='adam'
+        self.work_dir="./test"
         self.optimizer_cfg={'lr':self.lr,'weight_decay':0.1,'betas':(0.9, 0.99)}
         self.chkpt_dir="checkpoints"
-        self.name="model"
-        self.chkpt_interval=1000
-        self.summary_interval=100
+        self.savename="model"
+        self.chkpt_interval=30
+        self.summary_interval=30
 
         self.load=Config()
         self.load.resume_state_path=None
-        self.load.network_chkpt_path=None
+        # "/home/cc/github/ref-sum/work/2023-02-28T05-04-37/checkpoints/model_2.state"
+        self.load.network_pth_path=None
+        # "/home/cc/github/ref-sum/work/2023-02-28T05-04-37/checkpoints/model_2.pth"
         self.load.strict_load=None
 
         self.bert=Config()
-        self.bert.query='bert-base-uncased'
-        self.bert.key='bert-base-uncased'
+        self.bert.maxlen=512
         self.bert.dropout=0.3
         self.bert.outputdim=768
+        self.bert.tokenizer='bert-base-uncased'
+        self.bert.rawoutput=True
+
+        self.data=Config()
+        self.data.maxlen=500
+        self.data.arxiv_json="/home/cc/github/ref-sum/refsum/data/temp_train/tmptrain_v1.json"
+        self.data.cited_pair="/home/cc/github/ref-sum/refsum/data/temp_train/tmptrain_cite.pickle"
+
+        self.ntxent=Config()
+        self.ntxent.tau=0.05
+
+        self.scheduler=Config()
+        self.scheduler.num_warmup_steps=20
+        self.scheduler.num_training_steps=None #caculated in main()
 
     def get_info(self):
         _dict={}
