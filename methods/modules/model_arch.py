@@ -1,8 +1,8 @@
 from transformers import BertTokenizer, BertModel, BertPreTrainedModel,BertConfig
 from torch import nn
 import torch
-from refsum.modules.dataset import BertInput, ModelInput
-from refsum.run.utils import*
+from methods.modules.dataset import BertInput, ModelInput
+from methods.run.utils import*
 from torch.utils.checkpoint import checkpoint
 import sys
 class BERTClass(nn.Module):

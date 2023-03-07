@@ -5,14 +5,14 @@ import sys
 sys.path.append("/home/cc/github/ref-sum")
 sys.path.append("/home/cc/github/ref-sum/refsum")
 from utils import *
-from refsum.modules.model_arch import BERTClass
-from refsum.mgr.model import Model
-from refsum.modules.dataset import NXTENTDataset
+from methods.modules.model_arch import BERTClass
+from methods.mgr.model import Model
+from methods.modules.dataset import NXTENTDataset
 import itertools
 from tqdm import tqdm
 import math
 from torch.utils.data import DataLoader,RandomSampler,SequentialSampler
-from refsum.modules.metric import metric_acc
+from methods.modules.metric import metric_acc
 import random
 model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
 query_embedding = model.encode('How big is London')

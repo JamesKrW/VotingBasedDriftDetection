@@ -1,39 +1,46 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
-from refsum.run.utils import *
+from methods.run.utils import *
 import pickle
 from transformers import AutoTokenizer
 import random
-class NXTENTDataset(Dataset):
+import numpy as np
+
+class DirftDataset(Dataset):
 
     def __init__(self, cfg,mode='train',ratio=0.8):
-
+        def dealdata(datas):
+            datas=datas[1:]
+            datas=datas[:,:-1]
+            i=0
+            window=5
+            newdatas=[]
+            while i+window<=datas.shape[0]:
+                mat=datas[i:i+window,:]
+                item=mat.flatten()
+                data=item[:-3]
+                label=item[-1]
+                i+=1
+                newdatas.append((data,label))
+            return newdatas
         #get arxiv_dict
-        arxiv_dict=loadjson(cfg.data.arxiv_json)
-        self.data = arxiv_dict
-        #get cite_pair
-        with open(cfg.data.cited_pair,'rb') as f:
-            cite_pair=pickle.load(f)
+        datas = np.genfromtxt('./data/avg_all.csv', delimiter=',')
         # random.shuffle(cite_pair)
+        new_data=dealdata(datas)
 
-        train_size=int(len(cite_pair)*ratio)
+        train_size=int(len(new_data)*ratio)
         assert mode in ['train','test']
         if mode=='train':
-            self.cite_pair=cite_pair[:train_size]
+            self.data=new_data[:train_size]
         else:
-            self.cite_pair=cite_pair[train_size:]
+            self.data=new_data[train_size:]
         random.shuffle(self.cite_pair)
 
        
-        
-        # init tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(cfg.bert.tokenizer)
-        self.tokenizer = tokenizer
-        
-        self.max_len = cfg.bert.maxlen
+
 
     def __len__(self):
-        return len(self.cite_pair)
+        return len(self.data)
 
     def __getitem__(self, index):
         # print(self.cite_pair[index])
