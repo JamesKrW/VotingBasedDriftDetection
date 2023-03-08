@@ -48,24 +48,6 @@ def predict_model(cfg, model, predict_loader):
     return outputs
 
 
-def plot(stream_window,path):
-    y = stream_window
-    x = [i for i in range(len(y))]
-
-    plt.figure(figsize=(30, 6))
-
-    # Plot the data
-    plt.plot(x, y)
-
-    # Add labels and title
-    plt.xlabel('X axis')
-    plt.ylabel('Y axis')
-    plt.title('Stream Data Plot')
-
-    # Add vertical lines
-    # Show the plot
-    plt.savefig(f'{path}') 
-    plt.show()
 
 def main(cfg):
     #set random seed

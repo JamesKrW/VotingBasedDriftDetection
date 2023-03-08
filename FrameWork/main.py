@@ -9,14 +9,15 @@ from skmultiflow.drift_detection import PageHinkley
 from skmultiflow.drift_detection import KSWIN
 import pickle
 from utils import plot
+import argparse
 import time
-def main():
-    ogdata = np.genfromtxt('/home/cc/github/VotingBasedDriftDetection/data/avg_all.csv', delimiter=',')
+def main(args):
+    ogdata = np.genfromtxt(args.og_path, delimiter=',')
 
   
     ogdata=ogdata[1:,-2]
 
-    with open('/home/cc/github/VotingBasedDriftDetection/methods/results/MLP-1678242665.pkl', 'rb') as f:
+    with open(f'{args.data_path}/pred.pickle', 'rb') as f:
     # Use pickle to deserialize the NumPy array from the file
         data_stream = pickle.load(f)
     
@@ -27,13 +28,17 @@ def main():
     dd.add_method(EDDM(),1)
     dd.add_method(HDDM_A(),1)
     dd.add_method(HDDM_W(),1)
-    dd.add_method(PageHinkley(),2)
+    dd.add_method(PageHinkley(),1)
     dd.add_method(KSWIN(),1)
     window_size=50
-    thresh_hold=200
+    thresh_hold=10
     change_list=dd.get_voted_drift(window_size=window_size,thresh_hold=thresh_hold)
     rec_time=int(time.time())
-    plot(ogdata,change_list,f'/home/cc/github/VotingBasedDriftDetection/FrameWork/results/mlp_{rec_time}_{window_size}_{thresh_hold}.png')
+    plot(ogdata,change_list,f'{args.data_path}/mlp_{rec_time}_{window_size}_{thresh_hold}.png')
 
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser(description='training template')
+    parser.add_argument('--og_path', type=str, default='/home/cc/github/VotingBasedDriftDetection/methods/data/m_1.csv', metavar='N',)
+    parser.add_argument('--data_path', type=str, default='/home/cc/github/VotingBasedDriftDetection/m_1/2023-03-08T03-59-13', metavar='N',)
+    args = parser.parse_args()
+    main(args)

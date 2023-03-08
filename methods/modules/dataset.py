@@ -24,7 +24,7 @@ class DriftDataset(Dataset):
             return newdatas
 
         #get arxiv_dict
-        datas = np.genfromtxt('./data/avg_all.csv', delimiter=',')
+        datas = np.genfromtxt(cfg.data.path, delimiter=',')
         datas[np.isnan(datas)]=0
         # random.shuffle(cite_pair)
         new_data=dealdata(datas)

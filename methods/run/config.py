@@ -9,12 +9,14 @@ class Config:
         parser = argparse.ArgumentParser(description='training template')
         parser.add_argument('--batch_size', type=int, default=128, metavar='N',
                             help='input batch size for training (default: 128)')
-        parser.add_argument('--num_epoch', type=int, default=100, metavar='N',
+        parser.add_argument('--num_epoch', type=int, default=1000, metavar='N',
                             help='number of epochs to train (default: 10)')
         parser.add_argument('--lr', type=float, default=1e-5, metavar='N',
                             help='learning rate')
         parser.add_argument('--seed', type=int, default=2022, metavar='N',
                             help='random seed')
+        parser.add_argument('--data_path', type=str, default=2022, metavar='N',
+                            help='data path to load data')
         args = parser.parse_args()
         
 
@@ -23,8 +25,11 @@ class Config:
         self.lr=args.lr
         self.seed=args.seed
 
+        self.data=Config()
+        self.data.path=args.data_path
+
         self.device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.work_dir="./test"
+        self.work_dir=f"./{self.data.path.split('/')[-1].split('.')[0].strip()}"
         self.optimizer_cfg={'lr':self.lr,'weight_decay':0.1,'betas':(0.9, 0.99)}
         self.chkpt_dir="checkpoints"
         self.savename="model"
@@ -38,11 +43,6 @@ class Config:
         # "/home/cc/github/ref-sum/work/2023-02-28T05-04-37/checkpoints/model_2.pth"
         self.load.strict_load=None
 
-
-        self.data=Config()
-        self.data.maxlen=500
-        self.data.arxiv_json="/home/cc/github/ref-sum/refsum/data/temp_train/tmptrain_v1.json"
-        self.data.cited_pair="/home/cc/github/ref-sum/refsum/data/temp_train/tmptrain_cite.pickle"
 
         self.ntxent=Config()
         self.ntxent.tau=0.05

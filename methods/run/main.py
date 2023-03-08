@@ -11,7 +11,7 @@ from tqdm import tqdm
 import math
 from torch.utils.data import DataLoader
 from methods.modules.metric import metric_acc
-
+import pickle
 def train_model(cfg, model, train_loader):
 
     model.net.train()
@@ -43,7 +43,40 @@ def train_model(cfg, model, train_loader):
                 "Train Loss %.04f, at (epoch: %d)"
                 % (total_train_loss/train_loop_len, model.epoch + 1)
             )
+
+def predict_model(cfg, model, predict_loader):
+    model.net.eval()
+    logger=cfg.logger
+    pbar = tqdm(predict_loader, postfix=f"loss: {model.loss_v:.04f}")
+    total_test_loss = 0
+    test_loop_len = 0
+    total_acc=0
+    total_n=0
+    outputs=np.array([])
+    with torch.no_grad():
+        for data, label in pbar:
+            output = model.inference(data)
+            maxarg=torch.argmax(output,dim=1)
+            maxarg=maxarg*10
+            outputs=np.concatenate((outputs,maxarg.detach().cpu().numpy().flatten()))
+            loss_v = model.loss_f(output, label.to(cfg.device))
+            acc,n=metric_acc(output,label,cfg)
+            total_acc+=acc
+            total_n+=n
+            total_test_loss += loss_v.to("cpu").item()
+            test_loop_len += 1
+            pbar.postfix = f"Test, loss: {loss_v:.04f}, acc: {acc/n}"
             
+
+        acc=total_acc/total_n
+        total_test_loss /= test_loop_len
+
+        logger.info(
+                "Test Loss %.04f, Test Acc %.04f, at (epoch: %d)"
+                % (total_test_loss, acc,model.epoch + 1)
+            )
+    print(outputs.shape)
+    return outputs     
 
 def test_model(cfg, model, test_loader):
     model.net.eval()
@@ -85,10 +118,11 @@ def main(cfg):
 
     train_dataset=DriftDataset(cfg,'train')
     test_dataset=DriftDataset(cfg,'test')
-  
+    pred_dataset=DriftDataset(cfg,'predict')
+
     train_loader=DataLoader(train_dataset,cfg.batch_size,shuffle=True)
     test_loader=DataLoader(test_dataset,cfg.batch_size,shuffle=False)
-    # test_loader=DataLoader(train_dataset,cfg.batch_size,shuffle=False)    #debug  
+    pred_loader=DataLoader(pred_dataset,128,shuffle=False)
 
     cfg.scheduler.num_training_steps = cfg.num_epoch * len(train_loader)
     
@@ -119,7 +153,19 @@ def main(cfg):
             model.save_training_state()
         test_model(cfg, model, test_loader)
     logger.info("End of Train")
-    
+
+    #run prediction
+    output=predict_model(cfg, model, pred_loader)
+    # Open a file for writing binary data
+    with open(osp.join(cfg.work_dir,'pred.pickle'), 'wb') as f:
+        # Use pickle to serialize the NumPy array and write it to the file
+        pickle.dump(output, f)
+
+    ogdata = np.genfromtxt(cfg.data.path, delimiter=',')
+    ogdata=ogdata[1:,-2]
+    plot(output,osp.join(cfg.work_dir,'pred.jpg'),(0,100))
+    plot(ogdata,osp.join(cfg.work_dir,'og.jpg'),(0,100))
+
 if __name__=='__main__':
     cfg=Config()
     cfg.init()
