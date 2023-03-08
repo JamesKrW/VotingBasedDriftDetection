@@ -9,7 +9,7 @@ class Config:
         parser = argparse.ArgumentParser(description='training template')
         parser.add_argument('--batch_size', type=int, default=128, metavar='N',
                             help='input batch size for training (default: 128)')
-        parser.add_argument('--num_epoch', type=int, default=300, metavar='N',
+        parser.add_argument('--num_epoch', type=int, default=100, metavar='N',
                             help='number of epochs to train (default: 10)')
         parser.add_argument('--lr', type=float, default=1e-5, metavar='N',
                             help='learning rate')
@@ -28,7 +28,7 @@ class Config:
         self.optimizer_cfg={'lr':self.lr,'weight_decay':0.1,'betas':(0.9, 0.99)}
         self.chkpt_dir="checkpoints"
         self.savename="model"
-        self.chkpt_interval=30
+        self.chkpt_interval=10
         self.summary_interval=30
 
         self.load=Config()
@@ -38,12 +38,6 @@ class Config:
         # "/home/cc/github/ref-sum/work/2023-02-28T05-04-37/checkpoints/model_2.pth"
         self.load.strict_load=None
 
-        self.bert=Config()
-        self.bert.maxlen=512
-        self.bert.dropout=0.3
-        self.bert.outputdim=768
-        self.bert.tokenizer='bert-base-uncased'
-        self.bert.rawoutput=True
 
         self.data=Config()
         self.data.maxlen=500

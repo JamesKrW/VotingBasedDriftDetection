@@ -1,15 +1,15 @@
 from config import Config
 import sys
-sys.path.append("/home/cc/github/ref-sum")
-sys.path.append("/home/cc/github/ref-sum/refsum")
+sys.path.append("/home/cc/github/VotingBasedDriftDetection")
+sys.path.append("/home/cc/github/VotingBasedDriftDetection/methods")
 from utils import *
-from methods.modules.model_arch import BERTClass
 from methods.mgr.model import Model
-from methods.modules.dataset import NXTENTDataset
+from methods.modules.dataset import DriftDataset
+from methods.modules.model_arch import MLP
 import itertools
 from tqdm import tqdm
 import math
-from torch.utils.data import DataLoader,RandomSampler,SequentialSampler
+from torch.utils.data import DataLoader
 from methods.modules.metric import metric_acc
 
 def train_model(cfg, model, train_loader):
@@ -34,7 +34,7 @@ def train_model(cfg, model, train_loader):
         if model.step % cfg.summary_interval == 0:
             with torch.no_grad():
                 output = model.inference(data)
-                acc,n=metric_acc(output['query'], output['key'],cfg)
+                acc,n=metric_acc(output, label,cfg)
             logger.info(
                 "Train Loss %.04f, Train Acc %.04f  at (epoch: %d / step: %d)"
                 % (loss, acc/n, model.epoch + 1, model.step)
@@ -57,7 +57,7 @@ def test_model(cfg, model, test_loader):
         for data, label in pbar:
             output = model.inference(data)
             loss_v = model.loss_f(output, label.to(cfg.device))
-            acc,n=metric_acc(output['query'], output['key'],cfg)
+            acc,n=metric_acc(output,label,cfg)
             total_acc+=acc
             total_n+=n
             total_test_loss += loss_v.to("cpu").item()
@@ -83,10 +83,10 @@ def main(cfg):
     set_seed(cfg.seed)
 
 
-    train_dataset=NXTENTDataset(cfg,'train')
-    test_dataset=NXTENTDataset(cfg,'test')
+    train_dataset=DriftDataset(cfg,'train')
+    test_dataset=DriftDataset(cfg,'test')
   
-    train_loader=DataLoader(train_dataset,cfg.batch_size,shuffle=False)
+    train_loader=DataLoader(train_dataset,cfg.batch_size,shuffle=True)
     test_loader=DataLoader(test_dataset,cfg.batch_size,shuffle=False)
     # test_loader=DataLoader(train_dataset,cfg.batch_size,shuffle=False)    #debug  
 
@@ -94,7 +94,8 @@ def main(cfg):
     
     
      #initilize model 
-    net_arch = BERTClass(cfg)
+    net_arch = MLP(cfg)
+
     model = Model(cfg, net_arch=net_arch)
 
 

@@ -19,30 +19,14 @@ import sys
 #         return acc,n
     
 
-def metric_acc(query,key,cfg=None):
+def metric_acc(pred,target,cfg):
     # query=F.normalize(query, p=2, dim=1)
     # key=F.normalize(key, p=2, dim=1)
     # query=F.normalize(query, p=2, dim=1)
     # key=F.normalize(key, p=2, dim=1)
-    n=query.shape[0]
-    logits = query @ key.t()
-    prob = F.softmax(logits, dim=1)
-    maxarg=torch.argmax(prob,dim=1).detach().cpu().numpy()
-    maxprob=torch.max(prob,dim=1)[0].detach().cpu().numpy()
-    diagprob=torch.diagonal(prob).detach().cpu().numpy()
-    # acc=sum([maxarg[i]==i for i in range(n)])
-
-    # pred_flat = torch.argmax(logprob, dim=1).detach().cpu().numpy()
-
-    ys = np.array(list(range(n)))
-    # print("->max index:",maxarg,"->prob diff",np.mean(maxprob-diagprob))
-    # print(torch.max(logprob,dim=1).detach().cpu().numpy())
-    # acc=sum([maxarg[i]==i for i in range(n)]))
-    acc= np.sum(maxarg == ys) 
-    print(maxarg)
-    if cfg is not None:
-        cfg.logger.info(f"maxprob {np.mean(maxprob)},diagprob {np.mean(diagprob)}, probdiff {np.mean(maxprob-diagprob)}")
-    else:
-        print(f"maxprob {np.mean(maxprob)},diagprob {np.mean(diagprob)}, probdiff {np.mean(maxprob-diagprob)}")
-    # print(acc,acc2)
+    pred=pred.to(cfg.device)
+    target=target.to(cfg.device)
+    maxarg=torch.argmax(pred,dim=1)
+    n=pred.shape[0]
+    acc= torch.sum(maxarg == target).cpu().numpy()
     return acc,n

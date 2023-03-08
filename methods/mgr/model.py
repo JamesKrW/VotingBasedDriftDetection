@@ -5,10 +5,10 @@ from collections import OrderedDict
 import torch
 import torch.nn
 import sys
-from refsum.run.utils import *
-from refsum.modules.loss import NTXent
+from methods.run.utils import *
+from methods.modules.loss import EntropyLoss
 from transformers import get_scheduler
-from torch.optim import AdamW
+from torch.optim import Adam
 class Model:
     def __init__(self, cfg, net_arch):
         self.cfg = cfg
@@ -23,7 +23,7 @@ class Model:
         self._logger.info(f"training start")
 
         # init optimizer
-        self.optimizer=AdamW(self.net.parameters(), **self.cfg.optimizer_cfg)
+        self.optimizer=Adam(self.net.parameters(), **self.cfg.optimizer_cfg)
         # param_total=0
         # print(len(self.optimizer.param_groups))
         # for param_group in self.optimizer.param_groups:
@@ -40,16 +40,16 @@ class Model:
         # init loss
 
         self.loss_v = 0
-        self.lossfunc=NTXent(cfg)
+        self.lossfunc=EntropyLoss(cfg)
 
-    def loss_f(self,input:ModelOutput,target):
-        return self.lossfunc(input["query"],input["key"])
+    def loss_f(self,data,target):
+        return self.lossfunc(data,target)
     
-    def optimize_parameters(self, model_input:ModelInput, model_target):
+    def optimize_parameters(self, data,target):
         self.net.train()
         self.optimizer.zero_grad()
-        output = self.run_network(model_input)
-        loss_v = self.loss_f(output, model_target.to(self.device))
+        output = self.run_network(data)
+        loss_v = self.loss_f(output, target.to(self.device))
         loss_v.backward()
         # for name, param in self.net.named_parameters():
         #     if param.requires_grad:
@@ -84,20 +84,17 @@ class Model:
         self.step+=1
         self.loss_v = loss_v.item()
 
-    def inference(self, model_input:ModelInput):
+    def inference(self, data):
         # with torch.no_grad():
         self.net.eval()
-        output = self.run_network(model_input)
+        output = self.run_network(data)
         return output
 
-    def run_network(self, model_input:ModelInput):
+    def run_network(self, data):
         # wraping forward function 
-        for key, value in model_input.items():
-            for subkey, subvalue in value.items():
-                if torch.is_tensor(subvalue):
-                    model_input[key][subkey]=model_input[key][subkey].to(self.device)
+        data=data.to(self.device)
         # model_input = model_input.to(self.device)
-        output = self.net(model_input)
+        output = self.net(data)
         return output
 
     def save_network(self, save_file=True):
