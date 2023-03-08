@@ -23,10 +23,10 @@ class DriftDataset(Dataset):
                 newdatas.append((data,label))
             return newdatas
 
-        #get arxiv_dict
+
         datas = np.genfromtxt(cfg.data.path, delimiter=',')
         datas[np.isnan(datas)]=0
-        # random.shuffle(cite_pair)
+
         new_data=dealdata(datas)
 
 
@@ -47,7 +47,6 @@ class DriftDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        # print(self.cite_pair[index])
         data=self.data[index][0]
         label=np.array(int(min(self.data[index][1],99)/10))
         data_tensor=torch.tensor(data,dtype=torch.float32)

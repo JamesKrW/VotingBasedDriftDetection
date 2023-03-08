@@ -39,6 +39,8 @@ def train_model(cfg, model, train_loader):
                 "Train Loss %.04f, Train Acc %.04f  at (epoch: %d / step: %d)"
                 % (loss, acc/n, model.epoch + 1, model.step)
             )
+            cfg.train_acc.append(acc/n)
+        cfg.train_loss.append(loss)
     logger.info(
                 "Train Loss %.04f, at (epoch: %d)"
                 % (total_train_loss/train_loop_len, model.epoch + 1)
@@ -99,8 +101,8 @@ def test_model(cfg, model, test_loader):
 
         acc=total_acc/total_n
         total_test_loss /= test_loop_len
-
-        
+        cfg.test_acc.append(acc)
+        cfg.test_loss.append(total_test_loss)
         logger.info(
                 "Test Loss %.04f, Test Acc %.04f, at (epoch: %d)"
                 % (total_test_loss, acc,model.epoch + 1)
@@ -165,10 +167,18 @@ def main(cfg):
     ogdata=ogdata[1:,-2]
     plot(output,osp.join(cfg.work_dir,'pred.jpg'),(0,100))
     plot(ogdata,osp.join(cfg.work_dir,'og.jpg'),(0,100))
+    plot(cfg.test_acc,osp.join(cfg.work_dir,'test_acc.jpg'),"test_acc")
+    plot(cfg.train_loss,osp.join(cfg.work_dir,'train_loss.jpg'),"train_loss")
+    plot(cfg.train_acc,osp.join(cfg.work_dir,'train_acc.jpg'),"train_acc")
+    plot(cfg.test_loss,osp.join(cfg.work_dir,'test_loss.jpg'),"test_loss")
 
 if __name__=='__main__':
     cfg=Config()
     cfg.init()
+    cfg.train_loss=[]
+    cfg.test_loss=[]
+    cfg.train_acc=[]
+    cfg.test_acc=[]
     # print(cfg.get_info())
     main(cfg)
     

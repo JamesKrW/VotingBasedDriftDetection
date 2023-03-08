@@ -71,19 +71,20 @@ def loadjson(path:str)->dict:
     with open(path,'r') as f:
         return json.load(f)
     
-def plot(stream_window,path,ylim):
+def plot(stream_window,path,title='Stream Data Plot',ylim=None):
     y = stream_window
     x = [i for i in range(len(y))]
 
     plt.figure(figsize=(30, 6))
-    plt.ylim(ylim[0], ylim[1])
-    # Plot the data
+    if ylim!=None:
+        plt.ylim(ylim[0], ylim[1])
+        # Plot the data
     plt.plot(x, y)
 
     # Add labels and title
     plt.xlabel('X axis')
     plt.ylabel('Y axis')
-    plt.title('Stream Data Plot')
+    plt.title(title)
 
     # Add vertical lines
     # Show the plot
